@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>HeroFit Tracker</title>
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+/* inline styles (from styles.css) */
+body { -webkit-tap-highlight-color: transparent; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#f8f9fa; }
+.navbar { background:#061226 !important; color:#fff; }
+.container { max-width:760px; margin:auto; }
+.stat-box { background:#fff; border-radius:.5rem; padding:.6rem; }
+.stat-label { font-size:.8rem; color:#666; }
+.stat-value { font-size:1.2rem; font-weight:700; }
+.calendar { display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; }
+.cal-day { border-radius:6px; padding:6px; min-height:64px; background:#fff; position:relative; cursor:pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.cal-day .date-num { font-weight:700; }
+.cal-day .dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-top:6px; }
+.legend-green{background:#28a745;} .legend-yellow{background:#ffc107;} .legend-red{background:#dc3545;}
+.cal-day .weight { position:absolute; bottom:4px; right:6px; font-size:11px; color:#666; }
+.today-highlight { box-shadow: 0 0 0 2px rgba(10,116,218,0.12) inset; border:2px solid rgba(10,116,218,0.18); }
+.list-group-item .meta { color:#666; font-size:12px; }
+.btn-sm { padding:.25rem .5rem; }
+</style>
+</head>
+<body>
+<nav class="navbar navbar-dark sticky-top" style="padding:0.6rem 0.75rem;">
+  <div class="container d-flex align-items-center" style="gap:8px;">
+    <div style="font-weight:700;color:#fff;">HeroFit Tracker</div>
+    <div style="margin-left:auto; display:flex; gap:6px;">
+      <button id="btn-prev" class="btn btn-sm btn-outline-light">◀</button>
+      <button id="btn-calendar" class="btn btn-sm btn-outline-light">📅 Calendar</button>
+      <button id="btn-today" class="btn btn-sm btn-outline-light">📅 Today</button>
+      <button id="btn-next" class="btn btn-sm btn-outline-light">▶</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-3">
+  <div id="calendar-view" class="card mb-3" style="display:none;"><div class="card-body">
+    <div id="cal-header" class="d-flex justify-content-between align-items-center mb-2">
+      <button id="cal-prev" class="btn btn-sm btn-outline-secondary">◀</button>
+      <h5 id="cal-month" class="mb-0"></h5>
+      <button id="cal-next" class="btn btn-sm btn-outline-secondary">▶</button>
+    </div>
+    <div id="calendar" class="calendar"></div>
+    <div class="small text-center mt-2"><span class="dot legend-green"></span> calories+workout • <span class="dot legend-yellow"></span> calories ok only • <span class="dot legend-red"></span> calories exceeded</div>
+  </div></div>
+
+  <div id="main-content">
+    <div id="today" class="card mb-3"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">Date: <span id="today-date"></span></h5>
+      </div>
+
+      <div class="row g-2 text-center mb-3">
+        <div class="col-4" style="display:inline-block; width:32%; vertical-align:top;"><div class="stat-box p-2">
+          <div class="stat-label">Calories</div>
+          <div class="stat-value" id="stat-cal">0</div>
+          <div class="progress mt-2"><div id="cal-progress" class="progress-bar" style="width:0%">0%</div></div>
+          <div id="cal-warning" class="small mt-1"></div>
+          <div class="mt-2">Goal: <input id="target-cal-display" type="number" style="width:90px" /></div>
+        </div></div>
+        <div class="col-4" style="display:inline-block; width:32%; vertical-align:top;"><div class="stat-box p-2"><div class="stat-label">Protein (g)</div><div class="stat-value" id="stat-pro">0</div></div></div>
+        <div class="col-4" style="display:inline-block; width:32%; vertical-align:top;"><div class="stat-box p-2"><div class="stat-label">Workouts</div><div class="stat-value" id="stat-wo">0</div></div></div>
+      </div>
+
+      <h6>Quick Add (Foods)</h6>
+      <div id="quick-foods" class="d-grid gap-2 mb-2" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div class="mb-2">
+        <select id="meal-type" class="form-select mb-2" style="width:100%;padding:.5rem;border-radius:6px;"><option>Snack</option><option>Lunch</option><option>Dinner</option></select>
+        <button id="add-custom" class="btn btn-primary w-100">+ Add Custom Food</button>
+      </div>
+
+      <hr><h6>Today's Meals</h6><ul id="today-meals" class="list-group"></ul>
+
+      <hr><h6>Today's Workout</h6><div id="today-workout"></div>
+      <div id="quick-workouts" class="d-grid gap-2 mb-2" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <button id="add-workout" class="btn btn-outline-primary w-100">+ Log custom workout</button>
+      <ul id="today-workouts" class="list-group mt-2"></ul>
+    </div></div>
+
+    <div id="progress" class="card mb-3" style="display:none;"><div class="card-body">
+      <h5>Progress</h5>
+      <div class="row g-2 mb-2">
+        <div class="col-6"><label>Weight (kg)</label><input id="weight-input" class="form-control" type="number" step="0.1"></div>
+        <div class="col-6"><label>Waist (cm)</label><input id="waist-input" class="form-control" type="number" step="0.1"></div>
+      </div>
+      <button id="save-progress" class="btn btn-primary">Save Progress</button>
+      <hr><h6>Weight Chart</h6><canvas id="weightChart" height="140"></canvas>
+      <div class="mt-2"><label>Target Weight (kg)</label><div class="input-group mb-2"><input id="weight-target" class="form-control" type="number" step="0.1"><button id="save-weight-target" class="btn btn-outline-secondary">Set Target</button></div>
+      <div class="progress"><div id="weight-progress" class="progress-bar" style="width:0%">0%</div></div></div>
+      <hr><h6>Progress Log</h6><ul id="progress-log" class="list-group"></ul>
+    </div></div>
+
+    <div id="settings" class="card mb-3" style="display:none;"><div class="card-body">
+      <h5>Settings</h5>
+      <div class="row g-2 mb-2">
+        <div class="col-6"><label>Daily Calorie Target</label><input id="target-cal" class="form-control" type="number" value="1900"></div>
+        <div class="col-6"><label>Protein Target (g)</label><input id="target-pro" class="form-control" type="number" value="160"></div>
+      </div>
+      <div class="d-grid gap-2"><button id="save-settings" class="btn btn-outline-secondary">Save Targets</button>
+      <button id="export-data" class="btn btn-outline-success">Export Data</button>
+      <input id="import-file" type="file" accept="application/json" style="display:none;">
+      <button id="import-data" class="btn btn-outline-primary">Import Data</button>
+      <button id="reset-app" class="btn btn-outline-danger">Reset App</button></div>
+      <p class="mt-2 small text-muted">Install: Share ▸ Add to Home Screen.</p>
+    </div></div>
+
+  </div>
+</div>
+
+<!-- external libs loaded from CDNs -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+/* Inline full app logic (condensed from latest rebuild) */
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{ navigator.serviceWorker && navigator.serviceWorker.register('service-worker.js').catch(()=>{}); });}
+const $ = s => document.querySelector(s);
+const todayLabel = $('#today-date');
+const todayMeals = $('#today-meals');
+const todayWorkouts = $('#today-workouts');
+const statCal = $('#stat-cal');
+const statPro = $('#stat-pro');
+const statWo = $('#stat-wo');
+const quickFoods = $('#quick-foods');
+const quickWOs = $('#quick-workouts');
+const todayWorkoutBox = $('#today-workout');
+const calProgress = $('#cal-progress');
+const calWarning = $('#cal-warning');
+const targetCalDisplay = $('#target-cal-display');
+
+const FOODS=[
+{name:'Rice 1 cup', kcal:200, protein:4},
+{name:'Egg (1 pc)', kcal:70, protein:6},
+{name:'Chicken breast 100g', kcal:165, protein:31},
+{name:'Potato 100g', kcal:77, protein:2},
+{name:'Pork 100g', kcal:250, protein:26},
+{name:'Tuna can (180g)', kcal:220, protein:40},
+{name:'Sisig (1 cup)', kcal:400, protein:20},
+{name:'Bicol Express (1 cup)', kcal:350, protein:18},
+{name:'Kikiam (1 pc)', kcal:35, protein:2},
+{name:'Quail egg fried (1 pc)', kcal:14, protein:1.2},
+{name:'Fishball (1 pc)', kcal:20, protein:1},
+{name:'Kopiko Blanca Twin Pack', kcal:120, protein:0},
+{name:'Milo Sachet', kcal:110, protein:2}
+];
+
+const SEQ=['Push','Pull','Legs','Abs','Push','Pull','Rest']; // Mon-Sun
+const WORKOUTS={
+'Push':{name:'Push (Chest & Shoulders)', details:'DB Bench Press 3x12, DB Shoulder Press 3x12, Tricep Extensions 3x12'},
+'Pull':{name:'Pull (Back & Biceps)', details:'One-arm DB Row 3x12/arm, DB Curl 3x12, Rear Delt Raises 3x12'},
+'Legs':{name:'Legs', details:'Squats 3x15, Lunges 3x12/leg, Calf Raises 3x20'},
+'Abs':{name:'Abs & Core', details:'Sit-ups 3x15, Leg Raises 3x12, Russian Twists 3x20'},
+'Rest':{name:'Rest / Active Recovery', details:'Light walk or stretching'}
+};
+
+const S = {
+  get d(){return localStorage.getItem('hf-date')||new Date().toISOString().slice(0,10)},
+  set d(v){localStorage.setItem('hf-date',v)},
+  get data(){return JSON.parse(localStorage.getItem('hf-data')||'{}')},
+  set data(v){localStorage.setItem('hf-data',JSON.stringify(v))},
+  get settings(){return JSON.parse(localStorage.getItem('hf-settings')||'{"targetCal":1900,"targetPro":160,"weightTarget":75}')},
+  set settings(v){localStorage.setItem('hf-settings',JSON.stringify(v))}
+};
+
+function ensureDay(d){const data=S.data; data[d]=data[d]||{meals:[],workouts:[],progress:null}; S.data=data;}
+function fmtDate(d){return new Date(d+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});}
+function weekdayForDate(d){ const dt=new Date(d+'T00:00:00'); const jsDay=dt.getDay(); return ((jsDay+6)%7); } // 0=Mon
+
+function renderQuickFoods(){quickFoods.innerHTML='';FOODS.forEach((f,i)=>{const b=document.createElement('button');b.className='btn btn-outline-secondary btn-sm';b.textContent=`${f.name} • ${f.kcal} kcal`;b.addEventListener('click',()=>addMeal(f.name,f.kcal,f.protein));quickFoods.appendChild(b);});}
+function renderQuickWOs(){quickWOs.innerHTML='';Object.keys(WORKOUTS).forEach(k=>{const w=WORKOUTS[k];const b=document.createElement('button');b.className='btn btn-outline-secondary btn-sm';b.textContent=`${w.name} — ${w.details}`;b.addEventListener('click',()=>addWorkout(w.name,w.details));quickWOs.appendChild(b);});}
+
+function addMeal(name,kcal,protein){const d=S.d; ensureDay(d); const data=S.data; data[d].meals.push({type:document.getElementById('meal-type').value,name,kcal,protein,t:Date.now()}); S.data=data; renderToday(); }
+function editMeal(idx){ const d=S.d; ensureDay(d); const data=S.data; const m = data[d].meals[idx]; const newName = prompt('Edit food name', m.name); if(newName===null) return; const newK = parseFloat(prompt('Calories (kcal)', m.kcal)||m.kcal)||m.kcal; const newP = parseFloat(prompt('Protein (g)', m.protein)||m.protein)||m.protein; m.name=newName; m.kcal=newK; m.protein=newP; S.data=data; renderToday(); }
+function deleteMeal(idx){ if(!confirm('Delete this meal?')) return; const d=S.d; ensureDay(d); const data=S.data; data[d].meals.splice(idx,1); S.data=data; renderToday(); }
+
+function addCustom(){ const name=prompt('Food name'); if(!name) return; const kcal=parseFloat(prompt('Calories:')||'0')||0; const protein=parseFloat(prompt('Protein (g):')||'0')||0; addMeal(name,kcal,protein); }
+
+function addWorkout(name,details){ const d=S.d; ensureDay(d); const data=S.data; data[d].workouts.push({name,details,completed:false,t:Date.now()}); S.data=data; renderToday(); }
+function toggleWorkout(idx){ const d=S.d; ensureDay(d); const data=S.data; data[d].workouts[idx].completed = !data[d].workouts[idx].completed; S.data=data; renderToday(); }
+function editWorkout(idx){ const d=S.d; ensureDay(d); const data=S.data; const w=data[d].workouts[idx]; const newName=prompt('Workout name', w.name); if(newName===null) return; const newDetails=prompt('Details', w.details)||w.details; w.name=newName; w.details=newDetails; S.data=data; renderToday(); }
+function deleteWorkout(idx){ if(!confirm('Delete this workout?')) return; const d=S.d; ensureDay(d); const data=S.data; data[d].workouts.splice(idx,1); S.data=data; renderToday(); }
+
+function currentWorkoutForDate(d){ const wd = weekdayForDate(d); return SEQ[wd]; }
+
+function renderTodayWorkout(){ const cur=currentWorkoutForDate(S.d); const w=WORKOUTS[cur]; todayWorkoutBox.innerHTML = `<div class="card mb-2"><div class="card-body"><strong>${w.name}</strong><p class="small">${w.details}</p><div class="d-grid gap-2"><button id="mark-done" class="btn btn-success">✔ Mark as Done</button></div></div></div>`; document.getElementById('mark-done').addEventListener('click', ()=>{ if(confirm('Mark this workout as done?')){ addWorkout(w.name+' (completed)', w.details+' (completed)'); alert('Marked done.'); renderToday(); } }); }
+
+function renderToday(){ const d=S.d; ensureDay(d); todayLabel.textContent = fmtDate(d); const day=S.data[d]; todayMeals.innerHTML=''; let kc=0, pr=0; day.meals.forEach((m,i)=>{ kc+=m.kcal; pr+=m.protein; const li=document.createElement('li'); li.className='list-group-item d-flex justify-content-between align-items-start'; li.innerHTML=`<div><strong>${m.type}:</strong> ${m.name}<br><small class="meta">${m.kcal} kcal • ${m.protein}g</small></div><div><button class="btn btn-sm btn-outline-secondary me-1 edit-meal">Edit</button><button class="btn btn-sm btn-outline-danger del-meal">Del</button></div>`; li.querySelector('.edit-meal').addEventListener('click', ()=>editMeal(i)); li.querySelector('.del-meal').addEventListener('click', ()=>deleteMeal(i)); todayMeals.appendChild(li); }); todayWorkouts.innerHTML=''; day.workouts.forEach((w,i)=>{ const li=document.createElement('li'); li.className='list-group-item d-flex justify-content-between align-items-start'; const doneMark = w.completed ? '✅ ' : ''; li.innerHTML=`<div><strong>${doneMark}${w.name}</strong><br><small class="meta">${w.details}</small></div><div><button class="btn btn-sm btn-outline-secondary me-1 edit-wo">Edit</button><button class="btn btn-sm btn-outline-secondary me-1 toggle-wo">Toggle</button><button class="btn btn-sm btn-outline-danger del-wo">Del</button></div>`; li.querySelector('.edit-wo').addEventListener('click', ()=>editWorkout(i)); li.querySelector('.toggle-wo').addEventListener('click', ()=>toggleWorkout(i)); li.querySelector('.del-wo').addEventListener('click', ()=>deleteWorkout(i)); todayWorkouts.appendChild(li); }); statCal.textContent=Math.round(kc); statPro.textContent=Math.round(pr); statWo.textContent=day.workouts.length; // cal progress
+  const settings=S.settings; const target=settings.targetCal||1900; targetCalDisplay.value=target; const pct=Math.min(100, Math.round((kc/target)*100)); calProgress.style.width=pct+'%'; calProgress.textContent=pct+'%'; if(kc>target){ calProgress.className='progress-bar bg-danger'; calWarning.textContent='❌ You exceeded your daily calories!'; calWarning.style.color='#c82333'; } else if(kc>=0.9*target){ calProgress.className='progress-bar bg-warning'; calWarning.textContent='⚠️ You are close to your calorie goal.'; calWarning.style.color='#856404'; } else { calProgress.className='progress-bar bg-success'; calWarning.textContent=''; } renderHistories(); renderProgress(); renderTodayWorkout(); renderQuickFoods(); renderQuickWOs(); renderCalendar(currentCalYear, currentCalMonth); }
+
+function renderHistories(){ const hm=document.getElementById('meals-history'); const hw=document.getElementById('workouts-history'); const data=S.data; const dates=Object.keys(data).sort().reverse().slice(0,60); let html='<div class="list-group">'; dates.forEach(d=>{ const day=data[d]; const kcal=day.meals.reduce((a,b)=>a+b.kcal,0); const pr=day.meals.reduce((a,b)=>a+b.protein,0); html+=`<div class="list-group-item"><strong>${fmtDate(d)}</strong> — ${kcal} kcal • ${Math.round(pr)}g protein<br>`; day.meals.forEach(m=>{ html+=`<small>${m.type}: ${m.name} (${m.kcal} kcal)</small><br>`; }); html+='</div>'; }); html+='</div>'; hm.innerHTML=html; let htmlw='<div class="list-group">'; dates.forEach(d=>{ const day=data[d]; if(day.workouts.length===0) return; htmlw+=`<div class="list-group-item"><strong>${fmtDate(d)}</strong><br>`; day.workouts.forEach(w=>{ htmlw+=`<small>${w.name}: ${w.details}</small><br>`; }); htmlw+='</div>'; }); htmlw+='</div>'; hw.innerHTML=htmlw; }
+
+// progress & chart
+let chart=null;
+function saveProgress(){ const w=parseFloat($('#weight-input').value||'0'); const waist=parseFloat($('#waist-input').value||'0'); if(!w && !waist){ alert('Enter weight or waist'); return; } const d=S.d; ensureDay(d); const data=S.data; data[d].progress={weight:w||null, waist:waist||null, t:Date.now()}; S.data=data; renderProgress(); alert('Saved'); }
+function renderProgress(){ const ul=$('#progress-log'); ul.innerHTML=''; const entries=[]; Object.entries(S.data).forEach(([d,day])=>{ if(day.progress) entries.push({d, ...day.progress}); }); entries.sort((a,b)=> a.d<b.d?1:-1); entries.forEach(e=>{ const li=document.createElement('li'); li.className='list-group-item d-flex justify-content-between align-items-start'; const parts=[]; if(e.weight) parts.push('Weight: '+e.weight+' kg'); if(e.waist) parts.push('Waist: '+e.waist+' cm'); li.innerHTML=`<div><strong>${fmtDate(e.d)}</strong><br><small>${parts.join(' • ')}</small></div>`; ul.appendChild(li); }); // chart
+  const items=[]; Object.entries(S.data).forEach(([d,day])=>{ if(day.progress && day.progress.weight) items.push({d,w:day.progress.weight}); }); items.sort((a,b)=> a.d<b.d?-1:1); const labels=items.map(i=>fmtDate(i.d)); const data=items.map(i=>i.w); const ctx=document.getElementById('weightChart').getContext('2d'); if(chart) chart.destroy(); chart=new Chart(ctx,{ type:'line', data:{ labels, datasets:[{ label:'Weight (kg)', data, tension:0.2, borderColor:'#0a74da', fill:false }] }, options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:false } } } }); // weight progress bar
+  const target=S.settings.weightTarget||75; $('#weight-target').value=target; if(data.length>0){ const latest=data[data.length-1]; const pct=Math.min(100, Math.round(((latest/target)*100))); $('#weight-progress').style.width=pct+'%'; $('#weight-progress').textContent=pct+'%'; } else { $('#weight-progress').style.width='0%'; $('#weight-progress').textContent='0%'; } }
+
+// settings / import / export
+function saveSettings(){ const c=parseInt($('#target-cal').value||'0')||1900; const p=parseInt($('#target-pro').value||'0')||160; const wt=parseFloat($('#weight-target').value||'0')||S.settings.weightTarget||75; const st=S.settings; st.targetCal=c; st.targetPro=p; st.weightTarget=wt; S.settings=st; alert('Saved'); renderToday(); }
+function exportData(){ const payload={date:S.d,data:S.data,settings:S.settings,exportedAt:new Date().toISOString()}; const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='herofit-data.json'; a.click(); }
+function importData(){ $('#import-file').click(); }
+document.getElementById('import-file').addEventListener('change',(e)=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const obj=JSON.parse(r.result); if(obj.date) S.d=obj.date; if(obj.data) S.data=obj.data; if(obj.settings) S.settings=obj.settings; renderToday(); alert('Import OK'); }catch(err){ alert('Invalid file'); } }; r.readAsText(f); });
+function resetApp(){ if(confirm('Reset all data?')){ localStorage.removeItem('hf-data'); localStorage.removeItem('hf-settings'); renderToday(); } }
+
+// date nav buttons
+$('#btn-prev').addEventListener('click',()=> shiftDay(-1));
+$('#btn-next').addEventListener('click',()=> shiftDay(1));
+$('#btn-today').addEventListener('click',()=> goToToday());
+$('#btn-calendar').addEventListener('click',()=> toggleCalendar());
+
+function shiftDay(delta){ const d=new Date(S.d+'T00:00:00'); d.setDate(d.getDate()+delta); S.d=d.toISOString().slice(0,10); renderToday(); }
+function goToToday(){ S.d=new Date().toISOString().slice(0,10); renderToday(); }
+
+// calendar implementation
+let currentCalYear = new Date().getFullYear();
+let currentCalMonth = new Date().getMonth(); // 0-11
+
+function toggleCalendar(){ const el=$('#calendar-view'); if(el.style.display==='none'){ el.style.display='block'; } else { el.style.display='none'; } renderCalendar(currentCalYear, currentCalMonth); }
+
+document.getElementById('cal-prev').addEventListener('click', ()=>{ currentCalMonth--; if(currentCalMonth<0){ currentCalYear--; currentCalMonth=11;} renderCalendar(currentCalYear, currentCalMonth); });
+document.getElementById('cal-next').addEventListener('click', ()=>{ currentCalMonth++; if(currentCalMonth>11){ currentCalYear++; currentCalMonth=0;} renderCalendar(currentCalYear, currentCalMonth); });
+
+// swipe support for calendar
+let touchStartX = null;
+document.addEventListener('touchstart', (e)=>{ if(!document.getElementById('calendar')) return; touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', (e)=>{ if(touchStartX===null) return; const dx = e.changedTouches[0].clientX - touchStartX; if(Math.abs(dx)>50){ if(dx<0){ currentCalMonth++; if(currentCalMonth>11){ currentCalYear++; currentCalMonth=0;} } else { currentCalMonth--; if(currentCalMonth<0){ currentCalYear--; currentCalMonth=11;} } renderCalendar(currentCalYear, currentCalMonth); } touchStartX=null; });
+
+function renderCalendar(year, month){
+  const cal = $('#calendar'); cal.innerHTML='';
+  const first = new Date(year, month, 1);
+  const startWeek = (first.getDay()+6)%7; // 0=Mon
+  const days = new Date(year, month+1, 0).getDate();
+  $('#cal-month').textContent = first.toLocaleString(undefined,{month:'long', year:'numeric'});
+  const headers=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  headers.forEach(h=>{ const hd=document.createElement('div'); hd.className='text-center small'; hd.textContent=h; cal.appendChild(hd); });
+  for(let i=0;i<startWeek;i++){ const b=document.createElement('div'); cal.appendChild(b); }
+  for(let d=1; d<=days; d++){
+    const dateStr = new Date(year, month, d).toISOString().slice(0,10);
+    const cell=document.createElement('div'); cell.className='cal-day';
+    const num = document.createElement('div'); num.className='date-num'; num.textContent=d; cell.appendChild(num);
+    const day = S.data[dateStr];
+    if(day && day.progress && day.progress.weight){ const w=document.createElement('div'); w.className='weight'; w.textContent=day.progress.weight+'kg'; cell.appendChild(w); }
+    if(day){
+      const kcal = day.meals.reduce((a,b)=>a+b.kcal,0);
+      const target = S.settings.targetCal||1900;
+      const workoutDone = day.workouts.some(w=>w.completed);
+      let dotColor = null;
+      if(kcal>target) dotColor='red'; else if(kcal<=target && workoutDone) dotColor='green'; else dotColor='yellow';
+      const dot = document.createElement('div'); dot.className='dot'; if(dotColor==='green') dot.style.background='#28a745'; if(dotColor==='yellow') dot.style.background='#ffc107'; if(dotColor==='red') dot.style.background='#dc3545'; cell.appendChild(dot);
+    }
+    const todayStr = new Date().toISOString().slice(0,10);
+    if(dateStr===todayStr){ cell.classList.add('today-highlight'); }
+    cell.addEventListener('click', ()=>{ S.d = dateStr; renderToday(); document.getElementById('calendar-view').style.display='none'; });
+    cal.appendChild(cell);
+  }
+}
+
+// init bindings
+document.getElementById('add-custom').addEventListener('click', addCustom);
+document.getElementById('add-workout').addEventListener('click', ()=>{ const n=prompt('Workout name'); const d=prompt('Details'); if(n) addWorkout(n,d||''); });
+document.getElementById('save-progress').addEventListener('click', saveProgress);
+document.getElementById('save-settings').addEventListener('click', saveSettings);
+document.getElementById('export-data').addEventListener('click', exportData);
+document.getElementById('import-data').addEventListener('click', importData);
+document.getElementById('reset-app').addEventListener('click', resetApp);
+document.getElementById('save-weight-target').addEventListener('click', ()=>{ const v=parseFloat($('#weight-target').value||'0'); const st=S.settings; st.weightTarget=v; S.settings=st; renderProgress(); alert('Weight target set'); });
+
+document.addEventListener('DOMContentLoaded', ()=>{ ensureDay(S.d); const st=S.settings; if(!st.targetCal){ st.targetCal=1900; S.settings=st;} todayLabel.textContent = fmtDate(S.d); renderQuickFoods(); renderQuickWOs(); renderToday(); renderCalendar(new Date().getFullYear(), new Date().getMonth()); });
+</script>
+</body>
+</html>
